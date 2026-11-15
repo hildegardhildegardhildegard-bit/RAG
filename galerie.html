@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Asset Renders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+  // ===== HIER DEINE SUPABASE-DATEN EINTRAGEN =====
+  // Supabase → Project Settings → API (bzw. "Data API" / "API Keys")
+  const SUPABASE_URL = 'https://yydwzakhbyvjahwoqajz.supabase.co';        // z. B. 'https://abcdefgh.supabase.co'
+  const SUPABASE_ANON_KEY = 'sb_publishable_leJlEcIpKBJ5iZ6IkBQXJQ_qJCWoKj2';   // der "anon" / "publishable" Key – NICHT der service_role / secret Key
+  // ===============================================
+</script>
+<style>
+  :root {
+    --paper: #141311;
+    --paper-2: #1e1c19;
+    --ink: #ece8df;
+    --ink-soft: #9a958a;
+    --line: #3a3732;
+    --rule: color-mix(in srgb, var(--ink) 90%, var(--paper));
+    --signal: #f0582a;
+    --btn-bg: color-mix(in srgb, var(--ink) 18%, transparent);
+    --btn-bg-hover: color-mix(in srgb, var(--ink) 34%, transparent);
+    --btn-border: color-mix(in srgb, var(--ink) 45%, transparent);
+    --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+    --sans: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.35; min-height: 100vh; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px 48px; }
+  button, input, select { font: inherit; color: inherit; }
+  a { color: inherit; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  .btn {
+    background: var(--btn-bg); border: 1px solid var(--btn-border); color: var(--ink);
+    padding: 8px 14px; cursor: pointer; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .03em; font-size: 14px; transition: background-color .12s; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--btn-bg-hover); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.small { font-family: var(--mono); font-weight: 400; font-size: 12px; padding: 4px 9px; text-transform: none; letter-spacing: 0; }
+  .btn.danger { border-color: var(--signal); color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+
+  header { display: flex; flex-wrap: wrap; gap: 16px; align-items: end; justify-content: space-between; padding: 22px 0 12px; border-bottom: 3px solid var(--rule); }
+  h1 { margin: 0; font-weight: 700; font-size: clamp(30px, 5vw, 54px); line-height: .9; letter-spacing: -.02em; text-transform: uppercase; }
+  h1 small { display: block; font-family: var(--mono); font-weight: 400; font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--ink-soft); margin-top: 8px; }
+  .head-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .rounds { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .rounds label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--ink-soft); }
+  select, input[type="text"], input[type="email"], input[type="password"] { background: var(--paper-2); border: 1px solid var(--line); padding: 8px 10px; min-width: 0; }
+  select { max-width: 260px; }
+  input:focus, select:focus { border-color: var(--signal); outline: none; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--ink-soft); padding: 8px 0; border-bottom: 1px solid var(--rule); }
+  .bar b { color: var(--ink); font-weight: 500; }
+  .bar .spacer { flex: 1; }
+  .msg { color: var(--signal); }
+
+  /* Anmeldung */
+  .auth { max-width: 420px; margin: 40px auto 0; border: 1px solid var(--rule); padding: 20px; display: grid; gap: 12px; }
+  .auth h2 { margin: 0; font-size: 22px; text-transform: uppercase; }
+  .auth p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+  .auth label { display: grid; gap: 4px; font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--ink-soft); }
+  .auth .switch { background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--ink-soft); justify-self: start; }
+  .setup { max-width: 640px; margin: 40px auto 0; border: 1px dashed var(--signal); padding: 20px; font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+  .setup strong { display: block; color: var(--ink); font-family: var(--sans); font-size: 20px; text-transform: uppercase; margin-bottom: 8px; }
+
+  /* Upload */
+  .upload { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; margin-top: 18px; border: 1px solid var(--rule); padding: 12px; }
+  .drop { position: relative; border: 1px dashed var(--btn-border); background: var(--paper-2); display: flex; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer; min-width: 0; }
+  .drop.over { border-color: var(--signal); }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop .pv { width: 64px; height: 40px; flex: none; background: var(--paper) center / cover no-repeat; border: 1px solid var(--line); }
+  .drop .txt { min-width: 0; }
+  .drop .txt strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drop .txt span { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .upload .fields { display: grid; gap: 4px; min-width: 0; }
+  .upload .fields label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--ink-soft); }
+
+  /* Raster */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px 14px; margin-top: 18px; }
+  .item { min-width: 0; }
+  .shot { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--line); padding: 0; cursor: zoom-in; overflow: hidden; }
+  .shot img, .shot video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shot .tag { position: absolute; left: 0; top: 0; background: var(--paper); font-family: var(--mono); font-size: 11px; padding: 1px 6px; }
+  .shot.covered { cursor: default; display: grid; place-items: center; background: repeating-linear-gradient(45deg, var(--paper-2) 0 10px, var(--paper) 10px 20px); }
+  .shot.covered span { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); background: var(--paper); padding: 3px 8px; border: 1px solid var(--line); }
+  .meta { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; align-items: start; }
+  .meta .t { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+  .meta .who { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .empty { margin-top: 18px; border: 1px dashed var(--line); padding: 36px 20px; text-align: center; color: var(--ink-soft); font-family: var(--mono); font-size: 13px; }
+  .empty strong { display: block; font-family: var(--sans); color: var(--ink); font-size: 20px; text-transform: uppercase; margin-bottom: 6px; }
+
+  /* Präsentieren */
+  .viewer { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.94); display: grid; grid-template-rows: auto 1fr auto; }
+  .viewer .top, .viewer .bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 16px; font-family: var(--mono); font-size: 13px; color: #ece8df; }
+  .viewer .stage { min-height: 0; display: grid; place-items: center; padding: 0 16px; }
+  .viewer .stage img, .viewer .stage video { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .viewer .vt { font-family: var(--sans); font-size: 22px; font-weight: 700; color: #ece8df; }
+
+  @media (max-width: 760px) { .upload { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Renders
+      <small>Jede Runde: 10 zufällige Assets, eine Szene pro Person. Hochladen, aufdecken, zeigen.</small>
+    </h1>
+    <div class="head-actions">
+      <a class="btn small" href="index.html">← Generator</a>
+      <div class="rounds" id="rounds-box" hidden>
+        <label for="round-select">Runde</label>
+        <select id="round-select"></select>
+        <form id="new-round" class="rounds">
+          <input id="new-round-name" type="text" placeholder="z. B. Folge 3" maxlength="60" aria-label="Name der neuen Runde">
+          <button class="btn small" type="submit">Neue Runde</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <div class="bar" id="bar" hidden>
+    <span>Abgegeben <b id="count">–</b></span>
+    <span>Status <b id="reveal-state">–</b></span>
+    <button id="reveal-btn" class="btn small" type="button">Alle aufdecken</button>
+    <button id="show-btn" class="btn small" type="button" hidden>Präsentieren</button>
+    <span class="spacer"></span>
+    <span id="msg" class="msg" role="status"></span>
+    <span>Angemeldet als <b id="me-name">–</b></span>
+    <button id="logout" class="btn small" type="button">Abmelden</button>
+  </div>
+
+  <div class="setup" id="setup" hidden>
+    <strong>Supabase noch nicht verbunden</strong>
+    Trag oben in galerie.html bei SUPABASE_URL und SUPABASE_ANON_KEY die Daten deines Supabase-Projekts ein.
+  </div>
+
+  <form class="auth" id="auth" hidden>
+    <h2 id="auth-title">Anmelden</h2>
+    <p id="auth-text">Mit deinem Galerie-Konto anmelden.</p>
+    <label id="name-row" hidden>Anzeigename<input id="auth-name" type="text" maxlength="40" autocomplete="nickname"></label>
+    <label>E-Mail<input id="auth-email" type="email" required autocomplete="email"></label>
+    <label>Passwort<input id="auth-pass" type="password" required minlength="6" autocomplete="current-password"></label>
+    <button class="btn" id="auth-submit" type="submit">Anmelden</button>
+    <button class="switch" id="auth-switch" type="button">Noch kein Konto? Registrieren</button>
+    <p class="msg" id="auth-msg" role="status"></p>
+  </form>
+
+  <div id="main" hidden>
+    <form id="upload" class="upload" hidden>
+      <label class="drop" id="drop" for="file">
+        <input id="file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,video/mp4,video/webm">
+        <span class="pv" id="file-pv"></span>
+        <span class="txt"><strong id="file-name">Render auswählen oder hierher ziehen</strong>
+          <span>PNG, JPG, WebP oder MP4/WebM bis 50 MB · große Bilder werden automatisch verkleinert</span></span>
+      </label>
+      <div class="fields">
+        <label for="title">Titel der Szene</label>
+        <input id="title" type="text" maxlength="80" placeholder="z. B. Drachen im Möbelhaus">
+      </div>
+      <button class="btn" id="upload-btn" type="submit" disabled>Hochladen</button>
+    </form>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty"><strong>Lädt …</strong></div>
+  </div>
+</div>
+
+<div class="viewer" id="viewer" hidden>
+  <div class="top"><span id="v-pos">1 / 1</span><button class="btn small" id="v-close" type="button">Schließen (Esc)</button></div>
+  <div class="stage" id="v-stage"></div>
+  <div class="bottom">
+    <button class="btn" id="v-prev" type="button">← Zurück</button>
+    <div style="text-align:center;min-width:0"><div class="vt" id="v-title"></div><div id="v-who"></div></div>
+    <button class="btn" id="v-next" type="button">Weiter →</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const BUCKET = 'renders';
+  const MAX_BYTES = 50 * 1024 * 1024 - 256 * 1024;   // Supabase Free: max. 50 MB pro Datei
+  const OK_IMAGE = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+  const OK_VIDEO = ['video/mp4', 'video/webm'];
+  const $ = id => document.getElementById(id);
+
+  // Farbe aus dem Farbrad des Generators übernehmen (gleiche Domain → gleicher Speicher)
+  try {
+    const ink = localStorage.getItem('assetLottery.ink.v1');
+    if (/^#[0-9a-f]{6}$/i.test(ink || '')) document.documentElement.style.setProperty('--ink', ink);
+  } catch (e) {}
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) { $('setup').hidden = false; return; }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let session = null, myName = '';
+  let rounds = [], renders = [], submitters = [], currentRound = null;
+  let pendingFile = null, busy = false, confirmDelete = null, signupMode = false, channel = null, loadGen = 0;
+  let viewList = [], viewIdx = 0;
+  try { currentRound = localStorage.getItem('renders.round'); } catch (e) {}
+
+  const say = t => { $('msg').textContent = t || ''; };
+  function setEmpty(head, text) {
+    const e = $('empty'); e.hidden = false; e.innerHTML = '';
+    const s = document.createElement('strong'); s.textContent = head;
+    e.append(s, document.createTextNode(text || ''));
+  }
+  const fileUrl = path => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  const errText = err => (err && (err.message || err.error_description)) || 'unbekannter Fehler';
+
+  // ---------- Anmeldung ----------
+  function showAuth() {
+    $('auth').hidden = false; $('main').hidden = true; $('bar').hidden = true; $('rounds-box').hidden = true;
+    $('auth-title').textContent = signupMode ? 'Registrieren' : 'Anmelden';
+    $('auth-text').textContent = signupMode ? 'Einmalig ein Konto für die Galerie anlegen.' : 'Mit deinem Galerie-Konto anmelden.';
+    $('name-row').hidden = !signupMode;
+    $('auth-name').required = signupMode;
+    $('auth-pass').autocomplete = signupMode ? 'new-password' : 'current-password';
+    $('auth-submit').textContent = signupMode ? 'Konto anlegen' : 'Anmelden';
+    $('auth-switch').textContent = signupMode ? 'Schon ein Konto? Anmelden' : 'Noch kein Konto? Registrieren';
+  }
+  $('auth-switch').onclick = () => { signupMode = !signupMode; $('auth-msg').textContent = ''; showAuth(); };
+  $('auth').addEventListener('submit', async e => {
+    e.preventDefault();
+    const email = $('auth-email').value.trim(), password = $('auth-pass').value;
+    $('auth-submit').disabled = true; $('auth-msg').textContent = '';
+    try {
+      if (signupMode) {
+        const name = $('auth-name').value.trim();
+        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name } } });
+        if (error) throw error;
+        if (!data.session) $('auth-msg').textContent = 'Konto angelegt. Bitte bestätige die E-Mail, dann anmelden.';
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+      $('auth-pass').value = '';
+    } catch (err) {
+      const m = errText(err);
+      $('auth-msg').textContent = /invalid login/i.test(m) ? 'E-Mail oder Passwort falsch.'
+        : /signups? not allowed|disabled/i.test(m) ? 'Neue Konten sind gerade gesperrt. Frag den Admin.'
+        : 'Hat nicht geklappt: ' + m;
+    } finally { $('auth-submit').disabled = false; }
+  });
+  $('logout').onclick = () => sb.auth.signOut();
+
+  sb.auth.onAuthStateChange((_ev, s) => {
+    const wasIn = !!session;
+    session = s;
+    if (!s) { if (channel) { sb.removeChannel(channel); channel = null; } showAuth(); return; }
+    myName = (s.user.user_metadata && s.user.user_metadata.name) || s.user.email.split('@')[0];
+    $('me-name').textContent = myName;
+    $('auth').hidden = true; $('main').hidden = false; $('bar').hidden = false; $('rounds-box').hidden = false;
+    if (!wasIn) { subscribe(); loadAll(); }
+  });
+
+  // ---------- Daten ----------
+  function subscribe() {
+    if (channel) return;
+    // Bei jeder Änderung neu laden – bei ein paar Freunden völlig ausreichend
+    channel = sb.channel('gallery')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds' }, () => loadAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'renders' }, () => loadAll())
+      .subscribe();
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && session) loadAll(); });
+
+  async function loadAll() {
+    const gen = ++loadGen;
+    const r = await sb.from('rounds').select('*').order('created_at', { ascending: false });
+    if (gen !== loadGen) return;
+    if (r.error) { say('Runden konnten nicht geladen werden: ' + errText(r.error)); return; }
+    rounds = r.data;
+    if (!rounds.find(x => x.id === currentRound)) currentRound = rounds[0] ? rounds[0].id : null;
+    if (currentRound) {
+      // RLS liefert nur aufgedeckte Renders oder die eigenen; die Abgabe-Liste kommt per Funktion
+      const [rr, ss] = await Promise.all([
+        sb.from('renders').select('*').eq('round_id', currentRound).order('created_at'),
+        sb.rpc('round_submitters', { rid: currentRound })
+      ]);
+      if (gen !== loadGen) return;
+      if (rr.error) say('Renders konnten nicht geladen werden: ' + errText(rr.error));
+      renders = rr.data || [];
+      submitters = ss.data || [];
+    } else { renders = []; submitters = []; }
+    render();
+  }
+
+  // ---------- Anzeige ----------
+  function render() {
+    const sel = $('round-select');
+    sel.innerHTML = '';
+    if (!rounds.length) { sel.disabled = true; sel.append(new Option('noch keine Runde', '')); }
+    else { sel.disabled = false; rounds.forEach(r => sel.append(new Option(r.name, r.id, false, r.id === currentRound))); }
+
+    const round = rounds.find(r => r.id === currentRound) || null;
+    const revealed = !!(round && round.revealed);
+    $('upload').hidden = !round;
+    $('count').textContent = round ? String(submitters.length) : '–';
+    $('reveal-state').textContent = round ? (revealed ? 'aufgedeckt' : 'verdeckt') : '–';
+    $('reveal-btn').hidden = !round;
+    $('reveal-btn').textContent = revealed ? 'Wieder verdecken' : 'Alle aufdecken';
+    $('show-btn').hidden = !(revealed && renders.length);
+
+    const grid = $('grid');
+    grid.innerHTML = '';
+    if (!round) { setEmpty('Noch keine Runde', 'Leg oben rechts eine Runde an, z. B. „Folge 1“. Danach lädt jede Person ihren Render hoch.'); return; }
+    if (!submitters.length) { setEmpty('Noch keine Renders', 'Lade oben deinen fertigen Render hoch. Bis zum Aufdecken sehen die anderen nur, dass du abgegeben hast.'); return; }
+    $('empty').hidden = true;
+
+    const uid = session.user.id;
+    // Sichtbare Renders + verdeckte Platzhalter für die übrigen Abgaben
+    const visibleIds = new Set(renders.map(r => r.id));
+    const entries = renders.map(r => ({ ...r, visible: true }));
+    submitters.forEach(s => { if (!visibleIds.has(s.id)) entries.push({ ...s, visible: false }); });
+    entries.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+    const shown = entries.filter(e => e.visible);
+
+    entries.forEach(r => {
+      const mine = r.author === uid;
+      const item = document.createElement('div'); item.className = 'item';
+      const shot = document.createElement('button'); shot.type = 'button';
+      shot.className = 'shot' + (r.visible ? '' : ' covered');
+      if (r.visible) {
+        const src = fileUrl(r.path);
+        const media = r.kind === 'video' ? document.createElement('video') : document.createElement('img');
+        if (r.kind === 'video') { media.muted = true; media.preload = 'metadata'; media.playsInline = true; }
+        else { media.alt = r.title || 'Render'; media.loading = 'lazy'; }
+        media.src = src;
+        media.onerror = () => { shot.classList.add('covered'); shot.innerHTML = '<span>Datei nicht verfügbar</span>'; };
+        shot.appendChild(media);
+        if (mine && !revealed) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = 'nur du siehst das'; shot.appendChild(t); }
+        shot.onclick = () => revealed ? openViewer(shown, shown.indexOf(r)) : openViewer([r], 0);
+      } else {
+        const s = document.createElement('span'); s.textContent = 'verdeckt bis zum Aufdecken';
+        shot.appendChild(s); shot.disabled = true;
+      }
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const left = document.createElement('div'); left.style.minWidth = '0';
+      const t = document.createElement('div'); t.className = 't'; t.textContent = r.visible ? (r.title || 'Ohne Titel') : '???';
+      const who = document.createElement('div'); who.className = 'who';
+      who.textContent = (r.author_name || 'Jemand') + (mine ? ' (du)' : '');
+      left.append(t, who); meta.appendChild(left);
+      if (mine && r.visible) {
+        const armed = confirmDelete === r.id;
+        const del = document.createElement('button'); del.type = 'button';
+        del.className = 'btn small' + (armed ? ' danger' : '');
+        del.textContent = armed ? 'Wirklich löschen?' : 'Löschen';
+        del.onclick = () => armed ? removeRender(r) : (confirmDelete = r.id, render());
+        meta.appendChild(del);
+      }
+      item.append(shot, meta); grid.appendChild(item);
+    });
+  }
+
+  // ---------- Aktionen ----------
+  $('round-select').addEventListener('change', e => {
+    currentRound = e.target.value || null; confirmDelete = null;
+    try { localStorage.setItem('renders.round', currentRound || ''); } catch (err) {}
+    loadAll();
+  });
+
+  $('new-round').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = $('new-round-name').value.trim();
+    if (!name) return;
+    const { data, error } = await sb.from('rounds').insert({ name }).select().single();
+    if (error) { say('Runde konnte nicht angelegt werden: ' + errText(error)); return; }
+    currentRound = data.id; $('new-round-name').value = '';
+    try { localStorage.setItem('renders.round', currentRound); } catch (err) {}
+    say('Runde „' + name + '“ angelegt.'); loadAll();
+  });
+
+  $('reveal-btn').addEventListener('click', async () => {
+    const round = rounds.find(r => r.id === currentRound); if (!round) return;
+    const { error } = await sb.from('rounds').update({ revealed: !round.revealed }).eq('id', round.id);
+    if (error) say('Ging nicht: ' + errText(error)); else loadAll();
+  });
+  $('show-btn').addEventListener('click', () => { const s = renders.slice(); if (s.length) openViewer(s, 0); });
+
+  function pickFile(f) {
+    pendingFile = f || null;
+    $('upload-btn').disabled = !pendingFile;
+    $('file-pv').style.backgroundImage = '';
+    if (!f) { $('file-name').textContent = 'Render auswählen oder hierher ziehen'; return; }
+    $('file-name').textContent = f.name + ' · ' + (f.size / 1048576).toFixed(1) + ' MB';
+    if (f.type.startsWith('image/')) $('file-pv').style.backgroundImage = 'url("' + URL.createObjectURL(f) + '")';
+    if (!$('title').value) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').slice(0, 80);
+  }
+  $('file').addEventListener('change', e => pickFile(e.target.files[0]));
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) pickFile(f); });
+
+  async function prepare(file) {
+    const type = file.type;
+    if (OK_VIDEO.includes(type)) {
+      if (file.size > MAX_BYTES) throw new Error('Video ist größer als 50 MB. Bitte kürzer oder stärker komprimiert exportieren.');
+      return { blob: file, type, kind: 'video', ext: type === 'video/mp4' ? 'mp4' : 'webm' };
+    }
+    if (OK_IMAGE.includes(type) && file.size <= MAX_BYTES) return { blob: file, type, kind: 'image', ext: type.split('/')[1].replace('jpeg', 'jpg') };
+    let bmp;
+    try { bmp = await createImageBitmap(file); } catch (e) { throw new Error('Dieses Format kann der Browser nicht lesen (z. B. EXR/TIFF). Bitte als PNG oder JPG exportieren.'); }
+    let scale = Math.min(1, 6144 / Math.max(bmp.width, bmp.height)), quality = 0.92;
+    for (let i = 0; i < 8; i++) {
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', quality));
+      if (blob && blob.size <= MAX_BYTES) return { blob, type: 'image/jpeg', kind: 'image', ext: 'jpg' };
+      scale *= 0.8; quality = Math.max(0.75, quality - 0.05);
+    }
+    throw new Error('Datei ist auch verkleinert noch über 50 MB.');
+  }
+
+  $('upload').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (busy || !pendingFile || !currentRound) return;
+    busy = true; $('upload-btn').disabled = true; say('lädt hoch …');
+    let path = null;
+    try {
+      const p = await prepare(pendingFile);
+      path = session.user.id + '/' + crypto.randomUUID() + '.' + p.ext;
+      const up = await sb.storage.from(BUCKET).upload(path, p.blob, { contentType: p.type, upsert: false });
+      if (up.error) throw up.error;
+      const ins = await sb.from('renders').insert({
+        round_id: currentRound, path, kind: p.kind,
+        title: $('title').value.trim().slice(0, 80), author_name: myName.slice(0, 40)
+      });
+      if (ins.error) { await sb.storage.from(BUCKET).remove([path]); throw ins.error; }
+      say('Hochgeladen.'); $('title').value = ''; $('file').value = ''; pickFile(null);
+      loadAll();
+    } catch (err) {
+      say(/exceeded|too large|payload/i.test(errText(err)) ? 'Datei ist zu groß für den Speicher.' : 'Upload fehlgeschlagen: ' + errText(err));
+    } finally { busy = false; $('upload-btn').disabled = !pendingFile; }
+  });
+
+  async function removeRender(r) {
+    confirmDelete = null;
+    const { error } = await sb.from('renders').delete().eq('id', r.id);
+    if (error) { say('Löschen fehlgeschlagen: ' + errText(error)); return; }
+    await sb.storage.from(BUCKET).remove([r.path]);
+    say('Gelöscht.'); loadAll();
+  }
+
+  // ---------- Präsentieren ----------
+  function openViewer(list, idx) { viewList = list; viewIdx = Math.max(0, idx); $('viewer').hidden = false; showView(); }
+  function showView() {
+    const r = viewList[viewIdx], st = $('v-stage');
+    st.innerHTML = '';
+    const m = r.kind === 'video' ? document.createElement('video') : document.createElement('img');
+    if (r.kind === 'video') { m.controls = true; m.autoplay = true; m.muted = true; m.loop = true; m.playsInline = true; }
+    else m.alt = r.title || 'Render';
+    m.src = fileUrl(r.path);
+    st.appendChild(m);
+    $('v-title').textContent = r.title || 'Ohne Titel';
+    $('v-who').textContent = 'von ' + (r.author_name || 'Jemand');
+    $('v-pos').textContent = (viewIdx + 1) + ' / ' + viewList.length;
+  }
+  const step = d => { viewIdx = (viewIdx + d + viewList.length) % viewList.length; showView(); };
+  const closeViewer = () => { $('viewer').hidden = true; $('v-stage').innerHTML = ''; };
+  $('v-prev').onclick = () => step(-1);
+  $('v-next').onclick = () => step(1);
+  $('v-close').onclick = closeViewer;
+  document.addEventListener('keydown', e => {
+    if ($('viewer').hidden) return;
+    if (e.key === 'Escape') closeViewer(); else if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1);
+  });
+})();
+</script>
+</body>
+</html>
