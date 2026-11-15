@@ -99,6 +99,23 @@
   .nav .count { font-family: var(--mono); font-size: 13px; display: grid; place-items: center; padding: 0 12px; border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
   .open-link { display: block; border-top: 1px solid var(--rule); padding: 13px 16px; text-decoration: none; font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .03em; }
   .open-link span { float: right; font-family: var(--mono); }
+  .dl-btn { width: 100%; text-align: left; border: 0; border-top: 1px solid var(--rule); cursor: pointer; font-family: inherit; }
+  .dl-btn:disabled { opacity: .45; cursor: default; }
+  .dl-token { border-top: 1px solid var(--rule); padding: 12px 16px; font-family: var(--mono); font-size: 11px; color: var(--ink-soft); }
+  .dl-token label { display: block; text-transform: uppercase; margin-bottom: 4px; }
+  .dl-token-row { display: flex; gap: 6px; }
+  .dl-token input {
+    flex: 1; min-width: 0; padding: 6px; background: var(--paper-2); color: var(--ink);
+    border: 1px solid #3a3732; font-family: var(--mono); font-size: 12px;
+  }
+  .dl-token input:focus { outline: none; border-color: var(--signal); }
+  .dl-token button { border: 1px solid var(--btn-border); padding: 0 10px; cursor: pointer; font-family: var(--mono); font-size: 11px; text-transform: uppercase; }
+  .dl-token small { display: block; margin-top: 6px; line-height: 1.5; }
+  .dl-token a, .dl-status a { color: var(--ink); }
+  .dl-status { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); padding: 0 16px; line-height: 1.5; }
+  .dl-status:not(:empty) { padding: 8px 16px 10px; }
+  .dl-status.err { color: var(--signal); }
+  .dl-status button { background: none; border: 0; padding: 0; color: var(--ink); text-decoration: underline; cursor: pointer; font: inherit; }
 
   /* Fortschritt: nur Position, keine Vorschau */
   .progress { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 10px; }
@@ -192,6 +209,7 @@
 
   /* Einheitlicher Look für alle Knöpfe */
   .timer-panel button, .times-up-box button, .times-up-box a,
+  .dl-token button,
   .roll, .tint-btn, .meta-bar button, .nav button, .open-link, .picker-foot button {
     background: var(--btn-bg);
     color: var(--ink);
@@ -290,6 +308,16 @@
         <span class="count" id="counter">00 / 10</span>
         <button onclick="nextModel()" title="Pfeil rechts">Weiter →</button>
       </div>
+      <button id="dl-btn" class="open-link dl-btn" type="button" disabled>USDZ herunterladen <span>↓</span></button>
+      <form id="dl-token" class="dl-token" hidden>
+        <label for="dl-token-in">Sketchfab API-Token</label>
+        <div class="dl-token-row">
+          <input id="dl-token-in" type="password" autocomplete="off" spellcheck="false" placeholder="Token einfügen">
+          <button type="submit">Speichern</button>
+        </div>
+        <small>Einmalig nötig. Zu finden unter <a href="https://sketchfab.com/settings/password" target="_blank" rel="noopener">sketchfab.com → Settings → Password &amp; API</a>. Bleibt nur in diesem Browser gespeichert.</small>
+      </form>
+      <div class="dl-status" id="dl-status" aria-live="polite"></div>
       <a id="model-link" class="open-link" href="#" target="_blank" rel="noopener">Auf Sketchfab öffnen <span>↗</span></a>
     </aside>
   </main>
@@ -487,6 +515,8 @@
     document.getElementById('model-category').textContent = CATEGORY_LABELS[m._category] || '—';
     document.getElementById('model-faces').textContent = m.faceCount ? m.faceCount.toLocaleString('de-DE') : '—';
     document.getElementById('model-link').href = m.viewerUrl;
+    document.getElementById('dl-btn').disabled = false;
+    setDlStatus('');
     document.getElementById('counter').textContent = `${num} / ${String(currentModels.length).padStart(2, '0')}`;
 
     renderProgress();
@@ -632,6 +662,100 @@
     drawWheel();
     apply(false);
   })();
+
+  // ---------- Direkter Download (USDZ) über die Sketchfab Download-API ----------
+  const TOKEN_KEY = 'assetLottery.sfToken.v1';
+  const dlBtn = document.getElementById('dl-btn');
+  const dlForm = document.getElementById('dl-token');
+  const dlTokenIn = document.getElementById('dl-token-in');
+  const dlStatus = document.getElementById('dl-status');
+  let dlBusy = false;
+
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
+  function setDlStatus(text, isErr = false) {
+    dlStatus.textContent = text;
+    dlStatus.classList.toggle('err', isErr);
+  }
+  const fileSlug = s => (s || 'modell').normalize('NFKD').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_').slice(0, 60) || 'modell';
+  const mb = bytes => bytes ? ` (${(bytes / 1048576).toFixed(1).replace('.', ',')} MB)` : '';
+
+  dlForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const t = dlTokenIn.value.trim();
+    if (!t) return;
+    setToken(t);
+    dlTokenIn.value = '';
+    dlForm.hidden = true;
+    downloadCurrent();
+  });
+
+  async function saveFile(url, filename) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = href; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 60000);
+    } catch (e) {
+      // Falls der Datei-Server keinen direkten Abruf erlaubt: Link in neuem Tab öffnen (lädt die Datei herunter)
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
+  async function downloadCurrent(format = 'usdz') {
+    const m = currentModels[currentIndex];
+    if (!m || dlBusy) return;
+    const token = getToken();
+    if (!token) {
+      dlForm.hidden = false;
+      setDlStatus('');
+      dlTokenIn.focus();
+      return;
+    }
+    dlBusy = true; dlBtn.disabled = true;
+    setDlStatus('Download-Link wird geholt …');
+    try {
+      const res = await fetch(`https://api.sketchfab.com/v3/models/${m.uid}/download`, {
+        headers: { Authorization: 'Token ' + token }
+      });
+      if (res.status === 401) {
+        setToken('');
+        dlForm.hidden = false;
+        setDlStatus('Token ungültig – bitte neu eintragen.', true);
+        return;
+      }
+      if (res.status === 429) { setDlStatus('Zu viele Downloads in kurzer Zeit – kurz warten und nochmal versuchen.', true); return; }
+      if (!res.ok) { setDlStatus(`Download nicht möglich (Fehler ${res.status}).`, true); return; }
+      const data = await res.json();
+      const file = data[format];
+      if (!file) {
+        const alt = ['glb', 'gltf'].find(k => data[k]);
+        setDlStatus(`Für dieses Modell gibt es kein ${format.toUpperCase()}. `, true);
+        if (alt) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.textContent = `Stattdessen ${alt.toUpperCase()} laden${mb(data[alt].size)}`;
+          b.onclick = () => downloadCurrent(alt);
+          dlStatus.appendChild(b);
+        }
+        return;
+      }
+      const ext = format === 'gltf' ? 'zip' : format;
+      setDlStatus(`Lädt ${ext.toUpperCase()}${mb(file.size)} …`);
+      await saveFile(file.url, `${fileSlug(m.name)}.${ext}`);
+      const author = m.user ? (m.user.displayName || m.user.username) : 'unbekannt';
+      setDlStatus(`Fertig. Lizenz ${m.license.label} – Credit: „${m.name}“ von ${author}.`);
+    } catch (e) {
+      setDlStatus('Netzwerkfehler beim Download.', true);
+    } finally {
+      dlBusy = false; dlBtn.disabled = false;
+    }
+  }
+  dlBtn.addEventListener('click', () => downloadCurrent());
 
   // ---------- Stunden-Timer ----------
   (function hourTimer() {
