@@ -149,12 +149,55 @@
   .picker-foot .preview { width: 34px; height: 20px; background: var(--ink); border: 1px solid #3a3732; }
   .picker-foot button { border: 1px solid var(--btn-border); padding: 3px 10px; cursor: pointer; font-family: var(--mono); font-size: 12px; }
 
+  /* Timer */
+  #timer-btn { font-variant-numeric: tabular-nums; }
+  #timer-btn.running { border-color: var(--ink); }
+  #timer-btn.warn { color: var(--signal); border-color: var(--signal); }
+  .timer-panel {
+    position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 252px;
+    background: var(--paper); border: 1px solid var(--rule); padding: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.6); font-family: var(--mono);
+  }
+  .timer-readout { font-size: 34px; text-align: center; letter-spacing: .02em; font-variant-numeric: tabular-nums; padding: 4px 0 10px; }
+  .timer-set { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .timer-set label { font-size: 10px; color: var(--ink-soft); text-transform: uppercase; }
+  .timer-set input {
+    display: block; width: 100%; margin-top: 2px; padding: 6px 4px; text-align: center;
+    background: var(--paper-2); color: var(--ink); border: 1px solid #3a3732;
+    font-family: var(--mono); font-size: 14px; -moz-appearance: textfield; appearance: textfield;
+  }
+  .timer-set input::-webkit-outer-spin-button, .timer-set input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .timer-set input:focus { outline: none; border-color: var(--signal); }
+  .timer-set input:disabled { opacity: .45; }
+  .timer-presets, .timer-ctrl { display: flex; gap: 6px; margin-top: 10px; }
+  .timer-panel button { flex: 1; border: 1px solid var(--btn-border); padding: 6px 0; cursor: pointer; font-family: var(--mono); font-size: 12px; text-transform: uppercase; }
+  .timer-panel button:disabled { opacity: .4; cursor: default; }
+
+  .times-up {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+    background: rgba(0,0,0,.72); padding: 16px;
+  }
+  .times-up-box {
+    width: min(460px, 100%); background: var(--paper); border: 2px solid var(--ink);
+    padding: 28px 24px 22px; text-align: center; animation: pulse 1s ease-in-out 4;
+  }
+  .times-up-box strong { display: block; font-family: var(--sans); font-size: clamp(30px, 7vw, 46px); text-transform: uppercase; letter-spacing: .02em; line-height: 1; }
+  .times-up-box p { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin: 12px 0 20px; }
+  .times-up-box .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .times-up-box button, .times-up-box a {
+    border: 1px solid var(--btn-border); padding: 9px 16px; cursor: pointer; text-decoration: none;
+    font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--ink) 25%, transparent); } }
+
   /* Einheitlicher Look für alle Knöpfe */
+  .timer-panel button, .times-up-box button, .times-up-box a,
   .roll, .tint-btn, .meta-bar button, .nav button, .open-link, .picker-foot button {
     background: var(--btn-bg);
     color: var(--ink);
     transition: background-color .12s;
   }
+  .timer-panel button:hover:not(:disabled), .times-up-box button:hover, .times-up-box a:hover,
   .roll:hover, .tint-btn:hover, .meta-bar button:hover, .nav button:hover, .open-link:hover, .picker-foot button:hover,
   .tint-btn[aria-expanded="true"] {
     background: var(--btn-bg-hover);
@@ -165,7 +208,8 @@
     aside { border-left: 0; border-top: 1px solid var(--rule); }
     header { grid-template-columns: 1fr; }
     .roll { flex: 1; justify-content: space-between; }
-    .picker { left: 0; right: auto; }
+    .picker, .timer-panel { left: 0; right: auto; }
+    .actions { flex-wrap: wrap; }
   }
 </style>
 </head>
@@ -177,6 +221,24 @@
       <small>10 zufällige Assets</small>
     </h1>
     <div class="actions">
+      <button id="timer-btn" class="tint-btn" aria-expanded="false" aria-controls="timer-panel" title="Timer stellen">Timer</button>
+      <div class="timer-panel" id="timer-panel" hidden>
+        <div class="timer-readout" id="timer-readout">0:00:00</div>
+        <div class="timer-set">
+          <label>Std<input id="t-h" type="number" min="0" max="23" value="3"></label>
+          <label>Min<input id="t-m" type="number" min="0" max="59" value="0"></label>
+          <label>Sek<input id="t-s" type="number" min="0" max="59" value="0"></label>
+        </div>
+        <div class="timer-presets">
+          <button type="button" data-min="60">1 h</button>
+          <button type="button" data-min="120">2 h</button>
+          <button type="button" data-min="180">3 h</button>
+        </div>
+        <div class="timer-ctrl">
+          <button type="button" id="t-start">Start</button>
+          <button type="button" id="t-reset">Reset</button>
+        </div>
+      </div>
       <a id="gallery-link" class="tint-btn" href="galerie.html" title="Renders hochladen und ansehen">Galerie →</a>
       <button id="tint-btn" class="tint-btn" aria-expanded="false" aria-controls="picker" title="Farbe der hellen Elemente ändern"><i></i>Farbe</button>
       <button id="roll" class="roll" onclick="loadRandomModels()">Neue Ziehung <kbd>R</kbd></button>
@@ -569,6 +631,126 @@
     [h, s, v] = rgbToHsv(...(fromHex(saved) || fromHex(DEFAULT)));
     drawWheel();
     apply(false);
+  })();
+
+  // ---------- Stunden-Timer ----------
+  (function hourTimer() {
+    const KEY = 'assetLottery.timer.v1';
+    const btn = document.getElementById('timer-btn');
+    const panel = document.getElementById('timer-panel');
+    const readout = document.getElementById('timer-readout');
+    const inH = document.getElementById('t-h'), inM = document.getElementById('t-m'), inS = document.getElementById('t-s');
+    const startBtn = document.getElementById('t-start');
+    const resetBtn = document.getElementById('t-reset');
+    const baseTitle = document.title;
+
+    // state: { end: Zeitstempel wenn läuft, left: Rest-ms wenn pausiert, done: abgelaufen & noch nicht bestätigt }
+    let state = {};
+    try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+
+    const fmt = ms => {
+      const t = Math.max(0, Math.ceil(ms / 1000));
+      return `${Math.floor(t / 3600)}:${String(Math.floor(t / 60) % 60).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+    };
+    const clamp = (inp, max) => Math.max(0, Math.min(max, parseInt(inp.value, 10) || 0));
+    const inputMs = () => ((clamp(inH, 23) * 60 + clamp(inM, 59)) * 60 + clamp(inS, 59)) * 1000;
+    const remaining = () => state.end ? state.end - Date.now() : (state.left ?? inputMs());
+
+    function render() {
+      const running = !!state.end, paused = !running && state.left != null;
+      const left = remaining();
+      readout.textContent = fmt(left);
+      [inH, inM, inS].forEach(i => i.disabled = running || paused);
+      startBtn.textContent = running ? 'Pause' : paused ? 'Weiter' : 'Start';
+      startBtn.disabled = !running && !paused && inputMs() === 0;
+      btn.textContent = running ? fmt(left) : paused ? '❚❚ ' + fmt(left) : 'Timer';
+      btn.classList.toggle('running', running);
+      btn.classList.toggle('warn', running && left <= 5 * 60 * 1000);
+      document.title = running ? `${fmt(left)} · ${baseTitle}` : baseTitle;
+    }
+
+    function tick() {
+      if (state.end && Date.now() >= state.end) {
+        state = { done: true }; save();
+        render(); timesUp();
+        return;
+      }
+      render();
+    }
+
+    startBtn.addEventListener('click', () => {
+      unlockAudio();
+      if (state.end) state = { left: state.end - Date.now() };               // pausieren
+      else { const left = state.left ?? inputMs(); if (left > 0) state = { end: Date.now() + left }; }
+      save(); render();
+    });
+    resetBtn.addEventListener('click', () => { state = {}; save(); render(); });
+    panel.querySelectorAll('[data-min]').forEach(b => b.addEventListener('click', () => {
+      state = {}; const m = +b.dataset.min;
+      inH.value = Math.floor(m / 60); inM.value = m % 60; inS.value = 0;
+      save(); render();
+    }));
+    [inH, inM, inS].forEach(i => i.addEventListener('input', render));
+
+    function toggle(open) { panel.hidden = !open; btn.setAttribute('aria-expanded', String(open)); }
+    btn.addEventListener('click', () => toggle(panel.hidden));
+    document.addEventListener('pointerdown', ev => {
+      if (!panel.hidden && !panel.contains(ev.target) && !btn.contains(ev.target)) toggle(false);
+    });
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') toggle(false); });
+
+    // ----- Ton -----
+    let audio;
+    function unlockAudio() {
+      try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) {}
+    }
+    function beep() {
+      if (!audio) return;
+      const t0 = audio.currentTime;
+      for (let i = 0; i < 6; i++) {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'square'; o.frequency.value = i % 2 ? 660 : 880;
+        g.gain.setValueAtTime(0.0001, t0 + i * 0.35);
+        g.gain.exponentialRampToValueAtTime(0.15, t0 + i * 0.35 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.35 + 0.28);
+        o.connect(g).connect(audio.destination);
+        o.start(t0 + i * 0.35); o.stop(t0 + i * 0.35 + 0.3);
+      }
+    }
+
+    // ----- Pop-up -----
+    function timesUp() {
+      toggle(false);
+      if (document.getElementById('times-up')) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'times-up'; wrap.id = 'times-up';
+      wrap.setAttribute('role', 'alertdialog'); wrap.setAttribute('aria-modal', 'true');
+      wrap.innerHTML = `
+        <div class="times-up-box">
+          <strong>Zeit abgelaufen</strong>
+          <p>Die Bauzeit ist um. Jetzt rendern und hochladen!</p>
+          <div class="row">
+            <button type="button" id="times-up-ok">OK</button>
+            <a href="galerie.html">Zur Galerie →</a>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+      const ok = wrap.querySelector('#times-up-ok');
+      ok.addEventListener('click', () => { wrap.remove(); state = {}; save(); render(); });
+      ok.focus();
+      beep();
+      let flip = false;
+      const flash = setInterval(() => {
+        if (!document.getElementById('times-up')) { clearInterval(flash); document.title = baseTitle; return; }
+        document.title = (flip = !flip) ? '⏰ ZEIT ABGELAUFEN' : baseTitle;
+      }, 800);
+    }
+
+    render();
+    if (state.done) timesUp();
+    setInterval(tick, 250);
+    document.addEventListener('visibilitychange', tick);
   })();
 </script>
 </body>
